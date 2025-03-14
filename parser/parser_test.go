@@ -44,6 +44,35 @@ func TestLetStatement(t *testing.T) {
 
 }
 
+func TestReturnStatement(t *testing.T) {
+	input := `
+	return 5;
+	return 10;
+	return 99918272
+	`
+
+	l := lexer.New(input)
+	p := New(l)
+
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	if len(program.Statements) != 3 {
+		t.Fatalf("statements=%d, got %d", 3, len(program.Statements))
+	}
+
+	for _, stmt := range program.Statements {
+		returnStatement, ok := stmt.(*ast.ReturnStatement)
+		if !ok {
+			t.Errorf("type=*ast.ReturnStatement, got=%T", stmt)
+			continue
+		}
+		if returnStatement.TokenLiteral() != "return" {
+			t.Errorf("tokenLiteral=%s, got=%s", "return", returnStatement.TokenLiteral())
+		}
+	}
+}
+
 func testLetStatement(t *testing.T, s ast.Statement, name string) bool {
 	if s.TokenLiteral() != "let" {
 		t.Errorf("tokenLiteral=%s, got %s", "let", s.TokenLiteral())

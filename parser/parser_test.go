@@ -48,12 +48,10 @@ func TestReturnStatement(t *testing.T) {
 	input := `
 	return 5;
 	return 10;
-	return 99918272
+	return 99918272;
 	`
-
 	l := lexer.New(input)
 	p := New(l)
-
 	program := p.ParseProgram()
 	checkParserErrors(t, p)
 
@@ -70,6 +68,37 @@ func TestReturnStatement(t *testing.T) {
 		if returnStatement.TokenLiteral() != "return" {
 			t.Errorf("tokenLiteral=%s, got=%s", "return", returnStatement.TokenLiteral())
 		}
+	}
+}
+
+func TestIdentifierExpression(t *testing.T) {
+	input := "foobar;"
+	l := lexer.New(input)
+	p := New(l)
+
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	if len(program.Statements) != 1 {
+		t.Fatalf("statements=%d, got %d", 1, len(program.Statements))
+	}
+
+	stmt, ok := program.Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("statementType=*ast.ExpressionStatement, got=%T", program.Statements[0])
+	}
+
+	ident, ok := stmt.Expression.(*ast.Identifier)
+	if !ok {
+		t.Fatalf("expressionType=*ast.Identifier, got %T", stmt.Expression)
+	}
+
+	if ident.Value != "foobar" {
+		t.Errorf("ident.Value=foobar, got=%s", ident.Value)
+	}
+
+	if ident.TokenLiteral() != "foobar" {
+		t.Errorf("tokenLiteral=foobar, got=%s", ident.TokenLiteral())
 	}
 }
 
@@ -95,6 +124,38 @@ func testLetStatement(t *testing.T, s ast.Statement, name string) bool {
 		return false
 	}
 	return true
+}
+
+func TestIntegerLiteralExpression(t *testing.T) {
+	input := "5;"
+	l := lexer.New(input)
+
+	p := New(l)
+
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	if len(program.Statements) != 1 {
+		t.Fatalf("len=%d, got %d", 1, len(program.Statements))
+	}
+
+	stmt, ok := program.Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("statementType=*ast.ExpressionStatement, got=%T", program.Statements[0])
+	}
+
+	literal, ok := stmt.Expression.(*ast.IntegerLiteral)
+	if !ok {
+		t.Fatalf("expressionType=*ast.IntegerLiteral, got=%T", stmt.Expression)
+	}
+
+	if literal.Value != 5 {
+		t.Errorf("value=5, got=%d", literal.Value)
+	}
+
+	if literal.TokenLiteral() != "5" {
+		t.Errorf("literalValue=5, got=%s", literal.TokenLiteral())
+	}
 }
 
 func checkParserErrors(t *testing.T, p *Parser) {

@@ -59,6 +59,7 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerPrefix(token.TRUE, p.parseBoolean)
 	p.registerPrefix(token.FALSE, p.parseBoolean)
 	p.registerPrefix(token.LPAREN, p.parseGroupExpression)
+	p.registerPrefix(token.IF, p.parseIfExpression)
 
 	//infix
 	p.registerInfix(token.PLUS, p.parseInfixExpression)
@@ -156,21 +157,21 @@ func (p *Parser) parseIdentifier() ast.Expression {
 func (p *Parser) parseLetStatement() *ast.LetStatement {
 	stmt := &ast.LetStatement{Token: p.curToken}
 
-	//after LET we expect an IDENT
 	if !p.expectPeek(token.IDENT) {
 		return nil
 	}
 
-	//set the Name for the statement
 	stmt.Name = &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
 
-	//after that for right now we expect a =
 	if !p.expectPeek(token.ASSIGN) {
 		return nil
 	}
 
-	//TODO: we are skipping Expressions until we encounter a semicolon
-	if !p.curTokenIs(token.SEMICOLON) {
+	p.nextToken()
+
+	stmt.Value = p.parseExpression(LOWEST)
+
+	if p.peekTokenIs(token.SEMICOLON) {
 		p.nextToken()
 	}
 
@@ -179,12 +180,15 @@ func (p *Parser) parseLetStatement() *ast.LetStatement {
 
 func (p *Parser) parseReturnStatement() *ast.ReturnStatement {
 	stmt := &ast.ReturnStatement{Token: p.curToken}
+
 	p.nextToken()
 
-	//TODO: we are skipping Expression until we encounter a semicolon
-	for !p.curTokenIs(token.SEMICOLON) {
+	stmt.ReturnValue = p.parseExpression(LOWEST)
+
+	if p.peekTokenIs(token.SEMICOLON) {
 		p.nextToken()
 	}
+
 	return stmt
 }
 
@@ -211,6 +215,61 @@ func (p *Parser) parsePrefixExpression() ast.Expression {
 
 	expression.Right = p.parseExpression(PREFIX)
 	return expression
+}
+
+func (p *Parser) parseIfExpression() ast.Expression {
+	expression := &ast.IfExpression{Token: p.curToken}
+	//check for left paren
+	if !p.expectPeek(token.LPAREN) {
+		return nil
+	}
+
+	//move to next token
+	p.nextToken()
+	expression.Condition = p.parseExpression(LOWEST)
+	//look for right paren
+	if !p.expectPeek(token.RPAREN) {
+		return nil
+	}
+
+	//look for a {
+	if !p.expectPeek(token.LBRACE) {
+		return nil
+	}
+
+	//parse that next expression as Consequence
+	expression.Consequence = p.parseBlockStatement()
+
+	if p.peekTokenIs(token.ELSE) {
+		p.nextToken()
+
+		//looking for another block after else
+		if !p.expectPeek(token.LBRACE) {
+			return nil
+		}
+
+		//parse the alternative expression
+		expression.Alternative = p.parseBlockStatement()
+	}
+
+	return expression
+}
+
+func (p *Parser) parseBlockStatement() *ast.BlockStatement {
+	block := &ast.BlockStatement{Token: p.curToken}
+	block.Statements = make([]ast.Statement, 0)
+
+	p.nextToken()
+
+	for !p.curTokenIs(token.RBRACE) && !p.curTokenIs(token.EOF) {
+		//parse each statement inside {}
+		stmt := p.parseStatement()
+		block.Statements = append(block.Statements, stmt)
+
+		p.nextToken()
+	}
+
+	return block
 }
 
 func (p *Parser) parseInfixExpression(left ast.Expression) ast.Expression {

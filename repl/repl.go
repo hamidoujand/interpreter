@@ -15,7 +15,6 @@ const prompt = ">> "
 
 func Start(in io.Reader, out io.Writer) {
 	scanner := bufio.NewScanner(in)
-
 	for {
 		fmt.Print(prompt)
 		scanned := scanner.Scan()

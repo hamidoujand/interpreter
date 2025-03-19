@@ -6,6 +6,7 @@ import (
 	"io"
 
 	"github.com/hamidoujand/interpreter/evaluator"
+	"github.com/hamidoujand/interpreter/object"
 	"github.com/hamidoujand/interpreter/parser"
 
 	"github.com/hamidoujand/interpreter/lexer"
@@ -15,6 +16,8 @@ const prompt = ">> "
 
 func Start(in io.Reader, out io.Writer) {
 	scanner := bufio.NewScanner(in)
+	env := object.NewEnvironment()
+
 	for {
 		fmt.Print(prompt)
 		scanned := scanner.Scan()
@@ -32,7 +35,7 @@ func Start(in io.Reader, out io.Writer) {
 			continue
 		}
 
-		evaluated := evaluator.Eval(program)
+		evaluated := evaluator.Eval(program, env)
 		if evaluated != nil {
 			io.WriteString(out, evaluated.Inspect())
 			io.WriteString(out, "\n")
